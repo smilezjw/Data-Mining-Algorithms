@@ -3,9 +3,35 @@
 __author__ = 'smilezjw'
 
 from math import log
+import math
 import operator
 import pickle
 import TreePlotter
+import random
+
+
+# 处理连续数据集
+def loadData(file):
+    fr = open(file, 'r')
+    iris = [inst.strip().split(',') for inst in fr.readlines()]
+    # 数据属性是连续值，将其划分为范围
+    for i in xrange(len(iris)):
+        iris[i][0] = math.ceil(float(iris[i][0]))  # sepal length取值范围 5, 6, 7, 8
+        iris[i][1] = math.ceil(float(iris[i][1]))  # sepal width取值范围 3， 4， 5
+        iris[i][2] = math.floor(float(iris[i][2])) + 1 if math.floor(float(iris[i][2])) % 2 else math.floor(float(iris[i][2])) + 2
+        iris[i][3] = math.ceil(float(iris[i][3])) if float(iris[i][3]) - math.floor(float(iris[i][3])) > 0.5 \
+                                                  else math.floor(float(iris[i][3])) + 0.5
+    randNum = []
+    # 划分测试集和训练集，测试集随机选择9条记录，每一个类别选择3条记录
+    while len(randNum) < 9:
+        randNum.append(random.randint(0, 49))
+        randNum.append(random.randint(50, 99))
+        randNum.append(random.randint(100, 149))
+    testing = [iris[i] for i in randNum]
+    training = [iris[i] for i in range(0, 150) if i not in randNum]
+    print 'training: ', len(training), training
+    print 'testing: ', len(testing), testing
+    return training, testing
 
 # 计算结果分类的熵
 def calShannonEnt(dataSet):
@@ -65,7 +91,7 @@ def chooseBestFeatureToSplit(dataSet):
 # 如果数据集已经处理了所有属性，但是类标签依然不是唯一的，
 # 则采用多数表决的方法决定该叶子结点的分类
 def majorityCnt(classList):
-    classCount= {}
+    classCount = {}
     for vote in classList:
         classCount[vote] = classCount.get(vote, 0) + 1
     sortedClassCount = sorted(classCount.iteritems(), key=operator.itemgetter(1), reverse=True)
@@ -91,21 +117,12 @@ def createTree(dataSet, labels):
         myTree[bestFeatLabel][value] = createTree(splitDataSet(dataSet, bestFeat, value), sublabels)
     return myTree
 
-# 创建数据集
-def createDataSet():
-    dataSet = [[1, 1, 'yes'],
-               [1, 1, 'yes'],
-               [1, 0, 'no'],
-               [0, 1, 'no'],
-               [0, 1, 'no']]
-    labels = ['no surfacing', 'flippers']
-    return dataSet, labels
-
 # 使用决策树进行分类
 def classify(inputTree, featLabels, testVec):
     firstStr = inputTree.keys()[0]
     secondDict = inputTree[firstStr]
     featIndex = featLabels.index(firstStr)
+    classLabel = None
     for key in secondDict.keys():
         if testVec[featIndex] == key:
             if type(secondDict[key]).__name__ == 'dict':
@@ -125,15 +142,25 @@ def grabTree(filename):
     return pickle.load(fr)
 
 if __name__ == '__main__':
-    # dataSet, labels = createDataSet()
-    # featureLabels = labels[:]
-    # myTree = createTree(dataSet, labels)
-    # print myTree
-    # print classify(myTree, featureLabels, [1,1])
+    # fr = open('lenses.txt')
+    # lenses = [inst.strip().split('\t') for inst in fr.readlines()]
+    # # print 'lenses: ', lenses
+    # lensesLabels = ['age', 'prescript', 'astigmatic', 'tearRate']
+    # lensesTree = createTree(lenses, lensesLabels)
+    # print lensesTree
+    # TreePlotter.createPlot(lensesTree)
 
-    fr = open('lenses.txt')
-    lenses = [inst.strip().split('\t') for inst in fr.readlines()]
-    lensesLabels = ['age', 'prescript', 'astigmatic', 'tearRate']
-    lensesTree = createTree(lenses, lensesLabels)
-    print lensesTree
-    TreePlotter.createPlot(lensesTree)
+    iris, testSet = loadData('iris.data')
+    print 'iris: ', len(iris), iris
+    irisLabels = ['sepal length', 'sepal width', 'petal length', 'petal width']
+    labels = irisLabels[:]
+    irisTree = createTree(iris, irisLabels)
+    print irisTree
+    accracy = 0
+    for test in testSet:
+        if classify(irisTree, labels, test[:4]) == test[-1]:
+            accracy += 1
+        else:
+            print test
+    print 'accracy: ', float(accracy) / len(testSet)
+    TreePlotter.createPlot(irisTree)
