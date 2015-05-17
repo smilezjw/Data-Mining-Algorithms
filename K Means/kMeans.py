@@ -5,14 +5,15 @@ __author__ = 'smilezjw'
 from numpy import *
 import numpy
 import math
-import matplotlib
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 def loadDataSet(fileName):
     dataMat = []
     fr = open(fileName)
     for line in fr.readlines():
-        curLine = line.strip().split('\t')
+        # curLine = line.strip().split('\t')    # 适用于testSet.txt数据集
+        curLine = line.strip().split(',')[:4]   # 适用于iris.data数据集
         fltLine = map(float, curLine)
         dataMat.append(fltLine)
     return mat(dataMat)
@@ -65,7 +66,9 @@ def kMeans(dataSet, k, distMeas=distEclud, createCent=randCent):
 
 # 二分kMeans算法
 def biKMeans(dataSet, k, distMeas=distEclud):
+    # 计算实例数量
     m = shape(dataSet)[0]
+    # clusterAssment记录每个点所属的质心的索引，以及该点和质心之间的距离
     clusterAssment = mat(zeros((m, 2)))
     # 计算整个数据集的质心
     centroid0 = mean(dataSet, axis=0).tolist()[0]
@@ -101,6 +104,8 @@ def biKMeans(dataSet, k, distMeas=distEclud):
         centList.append(bestNewCents[1, :].tolist()[0])
         # 更新聚类的簇
         clusterAssment[nonzero(clusterAssment[:, 0].A == bestCentToSplit)[0], :] = bestClustAss
+    print 'centList: ', centList
+    print 'clusterAssment: ', clusterAssment
     return mat(centList), clusterAssment
 
 # 球面距离计算公式
@@ -109,36 +114,65 @@ def distSLC(vecA, vecB):
     b = cos(vecA[0, 1] * pi / 180) * cos(vecB[0, 1] * pi / 180) * cos(pi * (vecB[0, 0] - vecA[0, 0]) / 180)
     return math.acos(a + b) * 6371.0
 
+# # 簇绘图函数
+# def clusterClubs(numClust=5):
+#     dataList = []
+#     fr = open('places.txt', 'r')
+#     for line in fr.readlines():
+#         line = line.split('\t')
+#         dataList.append([float(line[4]), float(line[3])])
+#     datMat = mat(dataList)
+#     myCentroids, clustAssing = biKMeans(datMat, numClust, distMeas=distSLC)
+#     fig = plt.figure()
+#     rect = [0.1, 0.1, 0.8, 0.8]
+#     scatterMarkers = ['s', 'o', '^', '8', 'p', 'd', 'v', 'h', '>', '<']
+#     axprops = dict(xticks=[], yticks=[])
+#     ax0 = fig.add_axes(rect, label='ax0', **axprops)
+#     imgP = plt.imread('Portland.png')
+#     ax0.imshow(imgP)
+#     ax1 = fig.add_axes(rect, label='ax1', frameon=False)
+#     for i in xrange(numClust):
+#         ptsInCurrCluster = datMat[nonzero(clustAssing[:, 0].A == i)[0], :]
+#         markerStyle = scatterMarkers[i % len(scatterMarkers)]
+#         ax1.scatter(ptsInCurrCluster[:, 0].flatten().A[0], ptsInCurrCluster[:, 1].flatten().A[0], marker=markerStyle, s=90)
+#     ax1.scatter(myCentroids[:, 0].flatten().A[0], myCentroids[:, 1].flatten().A[0], marker='+', s=300)
+#     plt.show()
+
+
 # 簇绘图函数
-def clusterClubs(numClust=5):
-    dataList = []
-    fr = open('places.txt', 'r')
-    for line in fr.readlines():
-        line = line.split('\t')
-        dataList.append([float(line[4]), float(line[3])])
-    datMat = mat(dataList)
-    myCentroids, clustAssing = biKMeans(datMat, numClust, distMeas=distSLC)
+def drawCluster(datMat, myCentroids, clustAssing, numClust=3):
+    # datMat = loadDataSet('iris.data')
+    # myCentroids, clustAssing = biKMeans(datMat, numClust, distMeas=distEclud)
     fig = plt.figure()
     rect = [0.1, 0.1, 0.8, 0.8]
     scatterMarkers = ['s', 'o', '^', '8', 'p', 'd', 'v', 'h', '>', '<']
-    axprops = dict(xticks=[], yticks=[])
-    ax0 = fig.add_axes(rect, label='ax0', **axprops)
-    imgP = plt.imread('Portland.png')
-    ax0.imshow(imgP)
-    ax1 = fig.add_axes(rect, label='ax1', frameon=False)
+    # ax1 = fig.add_axes(rect, label='ax1', frameon=False)
+    ax = fig.add_subplot(111, projection='3d')
     for i in xrange(numClust):
         ptsInCurrCluster = datMat[nonzero(clustAssing[:, 0].A == i)[0], :]
         markerStyle = scatterMarkers[i % len(scatterMarkers)]
-        ax1.scatter(ptsInCurrCluster[:, 0].flatten().A[0], ptsInCurrCluster[:, 1].flatten().A[0], marker=markerStyle, s=90)
-    ax1.scatter(myCentroids[:, 0].flatten().A[0], myCentroids[:, 1].flatten().A[0], marker='+', s=300)
+        ax.scatter(ptsInCurrCluster[:, 0].flatten().A[0], ptsInCurrCluster[:, 2].flatten().A[0],
+                   ptsInCurrCluster[:, 2].flatten().A[0], marker=markerStyle, color='blue', s=90)
+    ax.scatter(myCentroids[:, 0].flatten().A[0], myCentroids[:, 2].flatten().A[0], myCentroids[:, 2].flatten().A[0], marker='+', color='black', s=300)
     plt.show()
 
-
 if __name__ == '__main__':
-    dataMat = loadDataSet('testSet2.txt')
+    # dataMat = loadDataSet('testSet2.txt')
     # randCentroids = randCent(dataMat, 2)
     # print kMeans(dataMat, 4)
 
     # print biKMeans(dataMat, 3)
 
-    print clusterClubs(5)
+    #print clusterClubs(5)
+
+    dataMat = loadDataSet('iris.data')
+    # print kMeans(dataMat, 3)
+    centList, cluster = biKMeans(dataMat, 3)
+    clust1 = clust2 = clust3 = 0
+    for i in xrange(3):
+        clust1 = max(shape(nonzero(cluster[:50, 0].A == i))[1], clust1)
+        clust2 = max(shape(nonzero(cluster[50:100, 0].A == i))[1], clust2)
+        clust3 = max(shape(nonzero(cluster[100:150, 0].A == i))[1], clust3)
+    print clust1, clust2, clust3
+    print 'errorRate: ', 1.0 - float(clust1 + clust2 + clust3) / len(dataMat)
+    drawCluster(dataMat, centList, cluster)
